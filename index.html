@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>A次元 思考モデル シミュレーション</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      margin: 0;
+      padding: 0;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #f7f9fc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    #app {
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+    header {
+      padding: 10px 16px;
+      background: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      flex-shrink: 0;
+    }
+    h1 {
+      font-size: 1.0rem;
+      color: #1a202c;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge {
+      background: #edf2f7;
+      color: #4a5568;
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    /* キャンバス表示領域 */
+    #canvas-container {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      background: #ffffff;
+      cursor: crosshair;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    
+    /* Toast Notification */
+    #toast {
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(229, 62, 62, 0.95);
+      color: white;
+      padding: 8px 18px;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      box-shadow: 0 4px 15px rgba(229, 62, 62, 0.3);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      z-index: 100;
+      text-align: center;
+      width: max-content;
+      max-width: 90%;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(5px);
+    }
+
+    /* 操作コントロールエリア（画面下部） */
+    #controls-wrapper {
+      flex-shrink: 0;
+      background: #ffffff;
+      border-top: 1px solid #e2e8f0;
+      padding: 12px 16px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.03);
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    #controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      max-width: 550px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* スライダー＆障壁コントロールエリア */
+    .control-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      max-width: 550px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    #slider-container {
+      flex: 1.4;
+      min-width: 200px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: #f8fafc;
+      padding: 8px 14px;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+    }
+
+    #barrier-container {
+      flex: 1;
+      min-width: 180px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: #f8fafc;
+      padding: 8px 14px;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .slider-header, .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+    .slider-body, .panel-body {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+    }
+    .slider-label, .panel-label {
+      font-size: 0.8rem;
+      font-weight: bold;
+      color: #4a5568;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .slider-value {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #2563eb;
+      min-width: 45px;
+      text-align: right;
+    }
+    
+    /* トグルボタン（コンフォートゾーン & 障壁切り替え） */
+    .btn-toggle {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      outline: none;
+    }
+    .btn-toggle.active {
+      background: #eff6ff;
+      color: #2563eb;
+      border-color: #bfdbfe;
+    }
+    .btn-toggle.danger.active {
+      background: #fef2f2;
+      color: #dc2626;
+      border-color: #fecaca;
+    }
+
+    input[type=range] {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      background: #cbd5e1;
+      border-radius: 3px;
+      outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #2563eb;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .btn {
+      flex: 1;
+      padding: 10px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      border-radius: 10px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      outline: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      touch-action: manipulation;
+    }
+
+    .btn-self {
+      background: #f0fdf4;
+      color: #166534;
+      border-color: #bbf7d0;
+    }
+    .btn-self:hover, .btn-self:active {
+      background: #dcfce7;
+    }
+    .btn-self.active {
+      background: #22c55e;
+      color: white;
+      border-color: #16a34a;
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.35);
+    }
+
+    .btn-ego {
+      background: #eff6ff;
+      color: #1e40af;
+      border-color: #bfdbfe;
+    }
+    .btn-ego:hover, .btn-ego:active {
+      background: #dbeafe;
+    }
+    .btn-ego.active {
+      background: #3b82f6;
+      color: white;
+      border-color: #2563eb;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+    }
+
+    .btn-reset {
+      flex: 0 0 auto;
+      background: #fef2f2;
+      color: #991b1b;
+      border-color: #fecaca;
+      padding: 10px 14px;
+    }
+    .btn-reset:hover, .btn-reset:active {
+      background: #fee2e2;
+    }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <h1>A次元 思考モデル</h1>
+    <div class="badge" id="mode-badge">モード: 待機中</div>
+  </header>
+
+  <div id="canvas-container">
+    <div id="toast">ゴールが近過ぎます。現状の外に設定しましょう</div>
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <div id="controls-wrapper">
+    <div class="control-row">
+      <!-- ゴールのコンフォートゾーン可変スライダー & 表示切替 -->
+      <div id="slider-container">
+        <div class="slider-header">
+          <span class="slider-label">ゴールのコンフォートゾーン</span>
+          <button id="btn-toggle-cz" class="btn-toggle active">表示: ON</button>
+        </div>
+        <div class="slider-body">
+          <input type="range" id="comfort-slider" min="0" max="150" value="40">
+          <span class="slider-value" id="comfort-value">40px</span>
+        </div>
+      </div>
+
+      <!-- 障壁コントロール -->
+      <div id="barrier-container">
+        <div class="panel-header">
+          <span class="panel-label">障壁設定</span>
+          <button id="btn-toggle-barrier" class="btn-toggle danger">障壁: OFF</button>
+        </div>
+        <div class="panel-body">
+          <button id="btn-barrier-height" class="btn-toggle" style="width: 100%;">高さ: 通常</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="controls">
+      <button id="btn-self" class="btn btn-self">Self</button>
+      <button id="btn-ego" class="btn btn-ego">Ego</button>
+      <button id="btn-reset" class="btn btn-reset" title="リセット">↺</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const btnSelf = document.getElementById('btn-self');
+  const btnEgo = document.getElementById('btn-ego');
+  const btnReset = document.getElementById('btn-reset');
+  const btnToggleCz = document.getElementById('btn-toggle-cz');
+  const btnToggleBarrier = document.getElementById('btn-toggle-barrier');
+  const btnBarrierHeight = document.getElementById('btn-barrier-height');
+  const modeBadge = document.getElementById('mode-badge');
+  const toast = document.getElementById('toast');
+  const comfortSlider = document.getElementById('comfort-slider');
+  const comfortValue = document.getElementById('comfort-value');
+
+  let mode = 'NONE';
+  let currentIndex = 1;
+
+  // W_n の現在位置
+  let W = { x: 0, y: 0 }; 
+
+  // Selfで配置された目標 W_{n+1}
+  let W_goal = null; 
+
+  // 自然長（張力0になる長さ＝コンフォートゾーンの半径）初期値 40px
+  let restLength = parseInt(comfortSlider.value, 10);
+  let showComfortZone = true; // コンフォートゾーンの表示フラグ
+  let barrierEnabled = false; // 障壁 ON/OFF
+  let barrierHigh = false;    // false: 通常(Normal: 0.35), true: 高い(High: 0.70)
+
+  let isSpringAttached = false;
+  let isDraggingEgo = false;
+  let dragCurrentPos = { x: 0, y: 0 };
+
+  let toastTimeout = null;
+
+  // スライダーの値が変更された時
+  comfortSlider.addEventListener('input', (e) => {
+    restLength = parseInt(e.target.value, 10);
+    comfortValue.innerText = `${restLength}px`;
+  });
+
+  // コンフォートゾーンの表示/非表示トグルボタン
+  btnToggleCz.addEventListener('click', () => {
+    showComfortZone = !showComfortZone;
+    btnToggleCz.classList.toggle('active', showComfortZone);
+    btnToggleCz.innerText = showComfortZone ? '表示: ON' : '表示: OFF';
+  });
+
+  // 障壁 ON/OFF トグルボタン
+  btnToggleBarrier.addEventListener('click', () => {
+    barrierEnabled = !barrierEnabled;
+    btnToggleBarrier.classList.toggle('active', barrierEnabled);
+    btnToggleBarrier.innerText = barrierEnabled ? '障壁: ON' : '障壁: OFF';
+  });
+
+  // 障壁 高さ（通常/高い）切替ボタン
+  btnBarrierHeight.addEventListener('click', () => {
+    barrierHigh = !barrierHigh;
+    btnBarrierHeight.innerText = barrierHigh ? '高さ: 高い' : '高さ: 通常';
+  });
+
+  function showToast(msg) {
+    if (msg) toast.innerText = msg;
+    toast.classList.add('show');
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+      toast.classList.remove('show');
+    }, 3000);
+  }
+
+  function resizeCanvas() {
+    const container = document.getElementById('canvas-container');
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    if (W.x === 0 && W.y === 0) {
+      initPositions();
+    }
+  }
+
+  function initPositions() {
+    const marginX = canvas.width * 0.25;
+    const axisOriginY = canvas.height - 50;
+    const axisMaxY = 40;
+    
+    // A次元（縦軸）の有効高さを計算
+    const axisHeight = axisOriginY - axisMaxY;
+    
+    // 初期位置 W1 を縦軸高さのちょうど 1/3 の位置にセット
+    W = { x: Math.max(marginX, 90), y: axisOriginY - (axisHeight * 0.33) };
+    W_goal = null;
+    currentIndex = 1;
+    isSpringAttached = false;
+    isDraggingEgo = false;
+    setMode('NONE');
+  }
+
+  window.addEventListener('resize', resizeCanvas);
+
+  function setMode(newMode) {
+    if (mode === newMode) {
+      mode = 'NONE';
+    } else {
+      mode = newMode;
+    }
+
+    btnSelf.classList.toggle('active', mode === 'SELF');
+    btnEgo.classList.toggle('active', mode === 'EGO');
+
+    if (mode === 'SELF') {
+      modeBadge.innerText = 'Self: タップでゴール設置';
+      modeBadge.style.background = '#dcfce7';
+      modeBadge.style.color = '#166534';
+    } else if (mode === 'EGO') {
+      modeBadge.innerText = 'Ego: ゴールからWへドラッグ';
+      modeBadge.style.background = '#dbeafe';
+      modeBadge.style.color = '#1e40af';
+    } else {
+      modeBadge.innerText = 'モード: 待機中';
+      modeBadge.style.background = '#edf2f7';
+      modeBadge.style.color = '#4a5568';
+    }
+  }
+
+  btnSelf.addEventListener('click', () => setMode('SELF'));
+  btnEgo.addEventListener('click', () => setMode('EGO'));
+  btnReset.addEventListener('click', initPositions);
+
+  function getCanvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = (e.touches && e.touches.length > 0) ? e.touches[0].clientX : (e.clientX || (e.changedTouches ? e.changedTouches[0].clientX : 0));
+    const clientY = (e.touches && e.touches.length > 0) ? e.touches[0].clientY : (e.clientY || (e.changedTouches ? e.changedTouches[0].clientY : 0));
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top
+    };
+  }
+
+  function distance(p1, p2) {
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  // 横軸の中央固定に障壁パラメータを取得
+  function getBarrierParams() {
+    const axisOriginX = 50;
+    const axisMaxX = canvas.width - 25;
+    const axisOriginY = canvas.height - 50;
+    const axisMaxY = 40;
+
+    const barrierX = (axisOriginX + axisMaxX) / 2; // 横軸の真ん中固定
+    const totalHeight = axisOriginY - axisMaxY;
+    
+    // 通常 (Normal): 縦軸の半分の高さ (0.35) / 高い (High): 縦軸全高に近い高さ (0.70)
+    const heightFactor = barrierHigh ? 0.70 : 0.35;
+    const height = totalHeight * heightFactor;
+    const topY = axisOriginY - height;
+
+    return { x: barrierX, topY: topY, bottomY: axisOriginY, width: 16 };
+  }
+
+  // 点p1とp2を結ぶ線分が障壁に交差しているかチェック
+  function isBlockedByBarrier(p1, p2) {
+    if (!barrierEnabled) return false;
+    const b = getBarrierParams();
+
+    const minX = Math.min(p1.x, p2.x);
+    const maxX = Math.max(p1.x, p2.x);
+
+    // p1とp2が障壁の左右を跨いでいる場合
+    if (minX <= b.x && b.x <= maxX && minX !== maxX) {
+      const t = (b.x - p1.x) / (p2.x - p1.x);
+      const intersectY = p1.y + t * (p2.y - p1.y);
+      // 交差位置が障壁上端より下にあれば遮断
+      if (intersectY >= b.topY) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function handleStart(e) {
+    const pos = getCanvasCoords(e);
+
+    if (mode === 'SELF') {
+      const axisOriginY = canvas.height - 50;
+      const axisOriginX = 50;
+      
+      if (pos.x > axisOriginX + 10 && pos.y < axisOriginY - 10) {
+        W_goal = { x: pos.x, y: pos.y };
+        isSpringAttached = false;
+      }
+    } else if (mode === 'EGO') {
+      if (W_goal) {
+        const dTarget = distance(pos, W_goal);
+        if (dTarget < 60) {
+          isDraggingEgo = true;
+          dragCurrentPos = { ...pos };
+        }
+      }
+    }
+  }
+
+  function handleMove(e) {
+    if (!isDraggingEgo) return;
+    dragCurrentPos = getCanvasCoords(e);
+  }
+
+  function handleEnd(e) {
+    if (isDraggingEgo) {
+      isDraggingEgo = false;
+      const endPos = getCanvasCoords(e);
+      const dW = distance(endPos, W);
+      
+      if (dW < 60) {
+        const dist = distance(W, W_goal);
+        if (dist <= restLength) {
+          showToast('ゴールが近過ぎます。現状の外に設定しましょう');
+          isSpringAttached = false;
+        } else if (isBlockedByBarrier(W, W_goal)) {
+          showToast('障壁に阻まれています');
+          isSpringAttached = false;
+        } else {
+          isSpringAttached = true;
+        }
+      }
+    }
+  }
+
+  canvas.addEventListener('mousedown', handleStart);
+  canvas.addEventListener('mousemove', handleMove);
+  window.addEventListener('mouseup', handleEnd);
+
+  canvas.addEventListener('touchstart', (e) => { handleStart(e); }, { passive: true });
+  canvas.addEventListener('touchmove', (e) => { handleMove(e); }, { passive: true });
+  window.addEventListener('touchend', (e) => { handleEnd(e); });
+
+  function update() {
+    if (isSpringAttached && W_goal) {
+      if (isBlockedByBarrier(W, W_goal)) {
+        isSpringAttached = false;
+        showToast('障壁に阻まれています');
+        return;
+      }
+
+      const dist = distance(W, W_goal);
+      const stretch = dist - restLength;
+
+      if (stretch > 0.5) {
+        const speedRatio = Math.min(0.018, stretch * 0.00018);
+        W.x += (W_goal.x - W.x) * speedRatio;
+        W.y += (W_goal.y - W.y) * speedRatio;
+      } else {
+        W_goal = null;
+        isSpringAttached = false;
+        currentIndex++;
+      }
+    }
+  }
+
+  function drawSpring(p1, p2, isSlack) {
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx);
+
+    ctx.save();
+    ctx.translate(p1.x, p1.y);
+    ctx.rotate(angle);
+
+    ctx.beginPath();
+    ctx.strokeStyle = isSlack ? '#a0aec0' : '#2b6cb0';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    if (isSlack) {
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(dist / 2, 15, dist, 0);
+      ctx.stroke();
+    } else {
+      const coils = 10;
+      const coilWidth = 10;
+      const startX = 8;
+      const endX = Math.max(startX + 8, dist - 8);
+      const len = endX - startX;
+
+      ctx.moveTo(0, 0);
+      ctx.lineTo(startX, 0);
+
+      for (let i = 0; i <= coils; i++) {
+        const x = startX + (len / coils) * i;
+        const y = i % 2 === 0 ? -coilWidth : coilWidth;
+        ctx.lineTo(x, y);
+      }
+
+      ctx.lineTo(dist, 0);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  // 障壁（赤色の壁）を描画
+  function drawBarrier() {
+    if (!barrierEnabled) return;
+    const b = getBarrierParams();
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(239, 68, 68, 0.85)';
+    ctx.beginPath();
+    ctx.roundRect(b.x - b.width / 2, b.topY, b.width, b.bottomY - b.topY, 4);
+    ctx.fill();
+
+    // 障壁の斜線模様
+    ctx.strokeStyle = 'rgba(185, 28, 28, 0.4)';
+    ctx.lineWidth = 2;
+    for (let y = b.topY + 6; y < b.bottomY; y += 12) {
+      ctx.beginPath();
+      ctx.moveTo(b.x - b.width / 2 + 2, y);
+      ctx.lineTo(b.x + b.width / 2 - 2, y + 6);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const axisOriginX = 50;
+    const axisOriginY = canvas.height - 50;
+    const axisMaxX = canvas.width - 25;
+    const axisMaxY = 40;
+
+    // 1. 軸描画
+    ctx.strokeStyle = '#2d3748';
+    ctx.lineWidth = 2.5;
+
+    // 横軸
+    ctx.beginPath();
+    ctx.moveTo(axisOriginX, axisOriginY);
+    ctx.lineTo(axisMaxX, axisOriginY);
+    ctx.stroke();
+
+    // 横軸矢印
+    ctx.beginPath();
+    ctx.moveTo(axisMaxX - 10, axisOriginY - 6);
+    ctx.lineTo(axisMaxX, axisOriginY);
+    ctx.lineTo(axisMaxX - 10, axisOriginY + 6);
+    ctx.fillStyle = '#2d3748';
+    ctx.fill();
+
+    // 縦軸
+    ctx.beginPath();
+    ctx.moveTo(axisOriginX, axisOriginY);
+    ctx.lineTo(axisOriginX, axisMaxY);
+    ctx.stroke();
+
+    // 縦軸矢印
+    ctx.beginPath();
+    ctx.moveTo(axisOriginX - 6, axisMaxY + 10);
+    ctx.lineTo(axisOriginX, axisMaxY);
+    ctx.lineTo(axisOriginX + 6, axisMaxY + 10);
+    ctx.fill();
+
+    // 「A次元」文字
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillStyle = '#1a202c';
+    ctx.fillText('A次元', axisOriginX - 25, axisMaxY - 12);
+
+    // 2. 障壁の描画
+    drawBarrier();
+
+    // 3. 射影点 P_n（写像）描画
+    const currentP = { x: W.x, y: axisOriginY };
+
+    // 点線（WからPヘ）
+    ctx.beginPath();
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = '#a0aec0';
+    ctx.lineWidth = 1.5;
+    ctx.moveTo(W.x, W.y);
+    ctx.lineTo(currentP.x, currentP.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 射影点の黒丸
+    ctx.fillStyle = '#1a202c';
+    ctx.beginPath();
+    ctx.ellipse(currentP.x, currentP.y, 14, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 写像文字 P_n （横軸の下側に配置するよう Y 座標のオフセットを調整）
+    ctx.font = 'bold 18px sans-serif';
+    ctx.fillStyle = '#1a202c';
+    ctx.textAlign = 'center';
+    ctx.fillText(`P${currentIndex}`, currentP.x, currentP.y + 24);
+    ctx.textAlign = 'left';
+
+    // 4. バネ描画
+    if (isSpringAttached && W_goal) {
+      const dist = distance(W, W_goal);
+      drawSpring(W, W_goal, dist <= restLength);
+    } else if (isDraggingEgo && W_goal) {
+      drawSpring(W_goal, dragCurrentPos, false);
+    }
+
+    // 5. ゴール W_{n+1} 描画
+    if (W_goal) {
+      // コンフォートゾーンのガイド円表示（表示ONかつ自然長>0のときのみ）
+      if (showComfortZone && restLength > 0) {
+        ctx.beginPath();
+        ctx.arc(W_goal.x, W_goal.y, restLength, 0, Math.PI * 2);
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.4)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      ctx.beginPath();
+      ctx.arc(W_goal.x, W_goal.y, 18, 0, Math.PI * 2);
+      ctx.strokeStyle = '#2563eb';
+      ctx.lineWidth = 3;
+      ctx.fillStyle = 'rgba(219, 234, 254, 0.6)';
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillStyle = '#1e40af';
+      ctx.fillText(`W${currentIndex + 1}`, W_goal.x - 12, W_goal.y - 24);
+    }
+
+    // 6. 主体 W_n 描画
+    ctx.beginPath();
+    ctx.arc(W.x, W.y, 18, 0, Math.PI * 2);
+    ctx.strokeStyle = '#1a202c';
+    ctx.lineWidth = 3;
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.font = 'bold 18px sans-serif';
+    ctx.fillStyle = '#1a202c';
+    ctx.fillText(`W${currentIndex}`, W.x - 12, W.y - 24);
+  }
+
+  function loop() {
+    update();
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  resizeCanvas();
+  requestAnimationFrame(loop);
+</script>
+
+</body>
+</html>
