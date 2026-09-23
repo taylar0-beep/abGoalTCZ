@@ -101,93 +101,63 @@
       flex-shrink: 0;
       background: #ffffff;
       border-top: 1px solid #e2e8f0;
-      padding: 12px 16px;
-      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      padding: 8px 12px;
+      padding-bottom: max(8px, env(safe-area-inset-bottom));
       box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.03);
       z-index: 20;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
     }
 
     #controls {
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 10px;
-      max-width: 550px;
+      gap: 8px;
+      max-width: 600px;
       margin: 0 auto;
       width: 100%;
     }
 
-    /* スライダー＆障壁コントロールエリア */
+    /* コンパクトな1行コントロールエリア */
     .control-row {
       display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      max-width: 550px;
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      max-width: 600px;
       margin: 0 auto;
       width: 100%;
-    }
-
-    #slider-container {
-      flex: 1.4;
-      min-width: 200px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
       background: #f8fafc;
-      padding: 8px 14px;
+      padding: 6px 10px;
       border-radius: 10px;
       border: 1px solid #e2e8f0;
     }
 
-    #barrier-container {
-      flex: 1;
-      min-width: 180px;
+    .slider-group {
       display: flex;
-      flex-direction: column;
+      align-items: center;
       gap: 6px;
-      background: #f8fafc;
-      padding: 8px 14px;
-      border-radius: 10px;
-      border: 1px solid #e2e8f0;
+      flex: 1 1 auto;
+      min-width: 0;
     }
 
-    .slider-header, .panel-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
-    }
-    .slider-body, .panel-body {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      width: 100%;
-    }
-    .slider-label, .panel-label {
-      font-size: 0.8rem;
-      font-weight: bold;
-      color: #4a5568;
-      white-space: nowrap;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
     .slider-value {
-      font-size: 0.85rem;
+      font-size: 0.75rem;
       font-weight: 700;
       color: #2563eb;
-      min-width: 45px;
+      min-width: 32px;
       text-align: right;
+      white-space: nowrap;
     }
     
     /* トグルボタン（コンフォートゾーン & 障壁切り替え） */
     .btn-toggle {
       font-size: 0.72rem;
       font-weight: 700;
-      padding: 3px 8px;
+      padding: 4px 6px;
       border-radius: 6px;
       border: 1px solid #cbd5e1;
       background: #ffffff;
@@ -195,6 +165,8 @@
       cursor: pointer;
       transition: all 0.2s ease;
       outline: none;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .btn-toggle.active {
       background: #eff6ff;
@@ -208,10 +180,12 @@
     }
 
     input[type=range] {
-      flex: 1;
+      width: 60px;
+      max-width: 80px;
+      flex: 1 1 auto;
       -webkit-appearance: none;
       appearance: none;
-      height: 6px;
+      height: 5px;
       background: #cbd5e1;
       border-radius: 3px;
       outline: none;
@@ -219,18 +193,18 @@
     input[type=range]::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
-      width: 18px;
-      height: 18px;
+      width: 14px;
+      height: 14px;
       border-radius: 50%;
       background: #2563eb;
       cursor: pointer;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     }
 
     .btn {
       flex: 1;
-      padding: 10px;
-      font-size: 0.9rem;
+      padding: 8px;
+      font-size: 0.85rem;
       font-weight: 700;
       border-radius: 10px;
       border: 2px solid transparent;
@@ -279,7 +253,7 @@
       background: #fef2f2;
       color: #991b1b;
       border-color: #fecaca;
-      padding: 10px 14px;
+      padding: 8px 12px;
     }
     .btn-reset:hover, .btn-reset:active {
       background: #fee2e2;
@@ -301,28 +275,16 @@
 
   <div id="controls-wrapper">
     <div class="control-row">
-      <!-- ゴールのコンフォートゾーン可変スライダー & 表示切替 -->
-      <div id="slider-container">
-        <div class="slider-header">
-          <span class="slider-label">ゴールのコンフォートゾーン</span>
-          <button id="btn-toggle-cz" class="btn-toggle active">表示: ON</button>
-        </div>
-        <div class="slider-body">
-          <input type="range" id="comfort-slider" min="0" max="150" value="40">
-          <span class="slider-value" id="comfort-value">40px</span>
-        </div>
+      <!-- ゴールのコンフォートゾーン表示切替 & 可変スライダー -->
+      <button id="btn-toggle-cz" class="btn-toggle active">ゴールのCZ表示: ON</button>
+      <div class="slider-group">
+        <input type="range" id="comfort-slider" min="0" max="80" value="40">
+        <span class="slider-value" id="comfort-value">40px</span>
       </div>
 
       <!-- 障壁コントロール -->
-      <div id="barrier-container">
-        <div class="panel-header">
-          <span class="panel-label">障壁設定</span>
-          <button id="btn-toggle-barrier" class="btn-toggle danger">障壁: OFF</button>
-        </div>
-        <div class="panel-body">
-          <button id="btn-barrier-height" class="btn-toggle" style="width: 100%;">高さ: 通常</button>
-        </div>
-      </div>
+      <button id="btn-toggle-barrier" class="btn-toggle danger">障壁: OFF</button>
+      <button id="btn-barrier-height" class="btn-toggle">高さ: Normal</button>
     </div>
 
     <div id="controls">
@@ -378,7 +340,7 @@
   btnToggleCz.addEventListener('click', () => {
     showComfortZone = !showComfortZone;
     btnToggleCz.classList.toggle('active', showComfortZone);
-    btnToggleCz.innerText = showComfortZone ? '表示: ON' : '表示: OFF';
+    btnToggleCz.innerText = showComfortZone ? 'ゴールのCZ表示: ON' : 'ゴールのCZ表示: OFF';
   });
 
   // 障壁 ON/OFF トグルボタン
@@ -388,10 +350,10 @@
     btnToggleBarrier.innerText = barrierEnabled ? '障壁: ON' : '障壁: OFF';
   });
 
-  // 障壁 高さ（通常/高い）切替ボタン
+  // 障壁 高さ（Normal/High）切替ボタン
   btnBarrierHeight.addEventListener('click', () => {
     barrierHigh = !barrierHigh;
-    btnBarrierHeight.innerText = barrierHigh ? '高さ: 高い' : '高さ: 通常';
+    btnBarrierHeight.innerText = barrierHigh ? '高さ: High' : '高さ: Normal';
   });
 
   function showToast(msg) {
@@ -486,7 +448,7 @@
     const barrierX = (axisOriginX + axisMaxX) / 2; // 横軸の真ん中固定
     const totalHeight = axisOriginY - axisMaxY;
     
-    // 通常 (Normal): 縦軸の半分の高さ (0.35) / 高い (High): 縦軸全高に近い高さ (0.70)
+    // Normal: 縦軸の半分の高さ (0.35) / High: 縦軸全高に近い高さ (0.70)
     const heightFactor = barrierHigh ? 0.70 : 0.35;
     const height = totalHeight * heightFactor;
     const topY = axisOriginY - height;
@@ -725,7 +687,7 @@
     ctx.ellipse(currentP.x, currentP.y, 14, 6, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // 写像文字 P_n （横軸の下側に配置するよう Y 座標のオフセットを調整）
+    // 写像文字 P_n （横軸の下側に配置: y + 24）
     ctx.font = 'bold 18px sans-serif';
     ctx.fillStyle = '#1a202c';
     ctx.textAlign = 'center';
