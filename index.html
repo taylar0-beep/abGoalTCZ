@@ -382,8 +382,8 @@
     // A次元（縦軸）の有効高さを計算
     const axisHeight = axisOriginY - axisMaxY;
     
-    // 初期位置 W1 を縦軸高さのちょうど 1/3 の位置にセット
-    W = { x: Math.max(marginX, 90), y: axisOriginY - (axisHeight * 0.33) };
+    // 初期位置 W1 を縦軸有効高の 40% の位置にセット
+    W = { x: Math.max(marginX, 90), y: axisOriginY - (axisHeight * 0.40) };
     W_goal = null;
     currentIndex = 1;
     isSpringAttached = false;
@@ -448,8 +448,8 @@
     const barrierX = (axisOriginX + axisMaxX) / 2; // 横軸の真ん中固定
     const totalHeight = axisOriginY - axisMaxY;
     
-    // Normal: 縦軸の半分の高さ (0.35) / High: 縦軸全高に近い高さ (0.70)
-    const heightFactor = barrierHigh ? 0.70 : 0.35;
+    // Normal: 縦軸有効高の 50% (0.50) / High: 縦軸有効高の 65% (0.65)
+    const heightFactor = barrierHigh ? 0.65 : 0.50;
     const height = totalHeight * heightFactor;
     const topY = axisOriginY - height;
 
